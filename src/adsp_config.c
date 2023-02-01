@@ -929,7 +929,6 @@ static int parse_css_v2_5(const toml_table_t *toml, struct parse_ctx *pctx,
 		return ret;
 
 	/* hardcoded to align with meu */
-	out->reserved0 = 0;
 	out->reserved1[0] = 0xf;
 	out->reserved1[1] = 0x048e0000; // TODO: what is this ?
 
@@ -975,8 +974,10 @@ static void dump_signed_pkg(const struct signed_pkg_info_ext *signed_pkg)
 }
 
 static int parse_signed_pkg(const toml_table_t *toml, struct parse_ctx *pctx,
-			    struct signed_pkg_info_ext *out, bool verbose)
+			    struct image *image, bool verbose)
 {
+	struct adsp *adsp = image->adsp;
+	struct signed_pkg_info_ext *out = &adsp->man_v1_8->signed_pkg;
 	struct signed_pkg_info_module *mod;
 	toml_array_t *bitmap_array;
 	toml_array_t *module_array;
@@ -1023,8 +1024,8 @@ static int parse_signed_pkg(const toml_table_t *toml, struct parse_ctx *pctx,
 	/* bitmap array */
 	bitmap_array = toml_array_in(signed_pkg, "bitmap");
 	if (!bitmap_array) {
-		/* default value */
-		out->bitmap[4] = 8;
+		/* default value, depending on the IMR type */
+		out->bitmap[4] = image->imr_type == 4 ? 0x10 : 0x8;
 	} else {
 		++ctx.array_cnt;
 		if (toml_array_kind(bitmap_array) != 'v' || toml_array_type(bitmap_array) != 'i' ||
@@ -1131,8 +1132,10 @@ static void dump_signed_pkg_v2_5(const struct signed_pkg_info_ext_v2_5 *signed_p
 }
 
 static int parse_signed_pkg_v2_5(const toml_table_t *toml, struct parse_ctx *pctx,
-			    struct signed_pkg_info_ext_v2_5 *out, bool verbose)
+				 struct image *image, bool verbose)
 {
+	struct adsp *adsp = image->adsp;
+	struct signed_pkg_info_ext_v2_5 *out = &adsp->man_v2_5->signed_pkg;
 	struct signed_pkg_info_module_v2_5 *mod;
 	toml_array_t *bitmap_array;
 	toml_array_t *module_array;
@@ -1179,8 +1182,8 @@ static int parse_signed_pkg_v2_5(const toml_table_t *toml, struct parse_ctx *pct
 	/* bitmap array */
 	bitmap_array = toml_array_in(signed_pkg, "bitmap");
 	if (!bitmap_array) {
-		/* default value - some use 0x10*/
-		out->bitmap[4] = 0x8;
+		/* default value, depending on the IMR type */
+		out->bitmap[4] = image->imr_type == 4 ? 0x10 : 0x8;
 	} else {
 		++ctx.array_cnt;
 		if (toml_array_kind(bitmap_array) != 'v' || toml_array_type(bitmap_array) != 'i' ||
@@ -1282,8 +1285,10 @@ static void dump_signed_pkg_ace_v1_5(const struct signed_pkg_info_ext_ace_v1_5 *
 }
 
 static int parse_signed_pkg_ace_v1_5(const toml_table_t *toml, struct parse_ctx *pctx,
-			    struct signed_pkg_info_ext_ace_v1_5 *out, bool verbose)
+				     struct image *image, bool verbose)
 {
+	struct adsp *adsp = image->adsp;
+	struct signed_pkg_info_ext_ace_v1_5 *out = &adsp->man_ace_v1_5->signed_pkg;
 	struct signed_pkg_info_module_ace_v1_5 *mod;
 	toml_array_t *module_array;
 	toml_table_t *signed_pkg;
@@ -1580,7 +1585,8 @@ static int parse_adsp_file_ext_v1_8(const toml_table_t *toml, struct parse_ctx *
 	out->ext_len = sizeof(struct sof_man_adsp_meta_file_ext_v1_8);
 
 	/* configurable fields */
-	out->imr_type = parse_uint32_hex_key(adsp_file_ext, &ctx, "imr_type", 0, &ret);
+	out->imr_type = parse_uint32_hex_key(adsp_file_ext, &ctx, "imr_type",
+					     MAN_DEFAULT_IMR_TYPE, &ret);
 	if (ret < 0)
 		return ret;
 
@@ -1700,7 +1706,8 @@ static int parse_adsp_file_ext_v2_5(const toml_table_t *toml, struct parse_ctx *
 	out->ext_len = sizeof(struct sof_man_adsp_meta_file_ext_v2_5);
 
 	/* configurable fields */
-	out->imr_type = parse_uint32_hex_key(adsp_file_ext, &ctx, "imr_type", 0, &ret);
+	out->imr_type = parse_uint32_hex_key(adsp_file_ext, &ctx, "imr_type",
+					     MAN_DEFAULT_IMR_TYPE, &ret);
 	if (ret < 0)
 		return ret;
 
@@ -2201,13 +2208,6 @@ static int parse_module(const toml_table_t *toml, struct parse_ctx *pctx,
 		if (ret < 0)
 			return err_key_parse("module_type", NULL);
 
-		if (strcmp((char *)mod_man->name, "BRNGUP") &&
-		    strcmp((char *)mod_man->name, "BASEFW")) {
-			if (type != i - 1) {
-				log_err(ret, "error: invalid type %d", type);
-				return -EINVAL;
-			}
-		}
 		header->module_type = type;
 
 		ret = parse_scheduling(mod_entry, &ctx_entry,
@@ -2246,9 +2246,10 @@ static int parse_module(const toml_table_t *toml, struct parse_ctx *pctx,
 	return 0;
 }
 
-static int parse_adsp_config_v1_0(const toml_table_t *toml, struct adsp *out,
-				  bool verbose)
+static int parse_adsp_config_v1_0(const toml_table_t *toml, struct image *image)
 {
+	struct adsp *out = image->adsp;
+	bool verbose = image->verbose;
 	struct parse_ctx ctx;
 	int ret;
 
@@ -2273,9 +2274,10 @@ static int parse_adsp_config_v1_0(const toml_table_t *toml, struct adsp *out,
 	return 0;
 }
 
-static int parse_adsp_config_v1_5(const toml_table_t *toml, struct adsp *out,
-				  bool verbose)
+static int parse_adsp_config_v1_5(const toml_table_t *toml, struct image *image)
 {
+	struct adsp *out = image->adsp;
+	bool verbose = image->verbose;
 	struct parse_ctx ctx;
 	int ret;
 
@@ -2339,9 +2341,10 @@ static int parse_adsp_config_v1_5(const toml_table_t *toml, struct adsp *out,
 	return 0;
 }
 
-static int parse_adsp_config_v1_8(const toml_table_t *toml, struct adsp *out,
-				  bool verbose)
+static int parse_adsp_config_v1_8(const toml_table_t *toml, struct image *image)
 {
+	struct adsp *out = image->adsp;
+	bool verbose = image->verbose;
 	struct parse_ctx ctx;
 	int ret;
 
@@ -2376,7 +2379,7 @@ static int parse_adsp_config_v1_8(const toml_table_t *toml, struct adsp *out,
 	if (ret < 0)
 		return err_key_parse("css", NULL);
 
-	ret = parse_signed_pkg(toml, &ctx, &out->man_v1_8->signed_pkg, verbose);
+	ret = parse_signed_pkg(toml, &ctx, image, verbose);
 	if (ret < 0)
 		return err_key_parse("signed_pkg", NULL);
 
@@ -2400,9 +2403,10 @@ static int parse_adsp_config_v1_8(const toml_table_t *toml, struct adsp *out,
 	return 0;
 }
 
-static int parse_adsp_config_v2_5(const toml_table_t *toml, struct adsp *out,
-				  bool verbose)
+static int parse_adsp_config_v2_5(const toml_table_t *toml, struct image *image)
 {
+	struct adsp *out = image->adsp;
+	bool verbose = image->verbose;
 	struct parse_ctx ctx;
 	int ret;
 
@@ -2437,7 +2441,7 @@ static int parse_adsp_config_v2_5(const toml_table_t *toml, struct adsp *out,
 	if (ret < 0)
 		return err_key_parse("css", NULL);
 
-	ret = parse_signed_pkg_v2_5(toml, &ctx, &out->man_v2_5->signed_pkg, verbose);
+	ret = parse_signed_pkg_v2_5(toml, &ctx, image, verbose);
 	if (ret < 0)
 		return err_key_parse("signed_pkg", NULL);
 
@@ -2465,9 +2469,10 @@ static int parse_adsp_config_v2_5(const toml_table_t *toml, struct adsp *out,
 	return 0;
 }
 
-static int parse_adsp_config_ace_v1_5(const toml_table_t *toml, struct adsp *out,
-				  bool verbose)
+static int parse_adsp_config_ace_v1_5(const toml_table_t *toml, struct image *image)
 {
+	struct adsp *out = image->adsp;
+	bool verbose = image->verbose;
 	struct parse_ctx ctx;
 	int ret;
 
@@ -2501,7 +2506,7 @@ static int parse_adsp_config_ace_v1_5(const toml_table_t *toml, struct adsp *out
 	if (ret < 0)
 		return err_key_parse("css", NULL);
 
-	ret = parse_signed_pkg_ace_v1_5(toml, &ctx, &out->man_ace_v1_5->signed_pkg, verbose);
+	ret = parse_signed_pkg_ace_v1_5(toml, &ctx, image, verbose);
 	if (ret < 0)
 		return err_key_parse("signed_pkg", NULL);
 
@@ -2562,7 +2567,7 @@ static int parse_version(toml_table_t *toml, int64_t version[2])
 struct config_parser {
 	int major;
 	int minor;
-	int (*parse)(const toml_table_t *toml, struct adsp *out, bool verbose);
+	int (*parse)(const toml_table_t *toml, struct image *image);
 };
 
 static const struct config_parser *find_config_parser(int64_t version[2])
@@ -2586,7 +2591,7 @@ static const struct config_parser *find_config_parser(int64_t version[2])
 	return NULL;
 }
 
-static int adsp_parse_config_fd(FILE *fd, struct adsp *out, bool verbose)
+static int adsp_parse_config_fd(FILE *fd, struct image *image)
 {
 	const struct config_parser *parser;
 	int64_t manifest_version[2];
@@ -2613,14 +2618,14 @@ static int adsp_parse_config_fd(FILE *fd, struct adsp *out, bool verbose)
 	}
 
 	/* run dedicated parser */
-	ret = parser->parse(toml, out, verbose);
+	ret = parser->parse(toml, image);
 error:
 	toml_free(toml);
 	return ret;
 }
 
 /* public function, fully handle parsing process */
-int adsp_parse_config(const char *file, struct adsp *out, bool verbose)
+int adsp_parse_config(const char *file, struct image *image)
 {
 	FILE *fd;
 	int ret;
@@ -2628,7 +2633,7 @@ int adsp_parse_config(const char *file, struct adsp *out, bool verbose)
 	fd = fopen(file, "r");
 	if (!fd)
 		return log_err(-EIO, "error: can't open '%s' file\n", file);
-	ret = adsp_parse_config_fd(fd, out, verbose);
+	ret = adsp_parse_config_fd(fd, image);
 	fclose(fd);
 	return ret;
 }

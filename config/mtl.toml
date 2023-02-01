@@ -49,7 +49,7 @@ name = "ADSPFW"
 load_offset = "0x40000"
 
 [module]
-count = 10
+count = 15
 	[[module.entry]]
 	name = "BRNGUP"
 	uuid = "2B79E4F3-4675-F649-89DF-3BC194A91AEB"
@@ -192,7 +192,7 @@ count = 10
 	instance_count = "40"
 	domain_types = "0"
 	load_type = "0"
-	module_type = "5"
+	module_type = "9"
 	auto_start = "0"
 	sched_caps = [1, 0x00008000]
 
@@ -217,7 +217,7 @@ count = 10
 	domain_types = "0"
 
 	load_type = "0"
-	module_type = "6"
+	module_type = "9"
 	auto_start = "0"
 	sched_caps = [1, 0x00008000]
 
@@ -288,7 +288,7 @@ count = 10
 	instance_count = "8"
 	domain_types = "0"
 	load_type = "0"
-	module_type = "8"
+	module_type = "12"
 	auto_start = "0"
 	sched_caps = [1, 0x00008000]
 
@@ -299,3 +299,97 @@ count = 10
 	mod_cfg = [0, 0, 0, 0, 960, 488500, 16, 16, 0, 0, 0,
 			1, 0, 0, 0, 960, 964500, 16, 16, 0, 0, 0,
 			2, 0, 0, 0, 960, 2003000, 16, 16, 0, 0, 0]
+
+	[[module.entry]]
+	name = "UPDWMIX"
+	uuid = "42F8060C-832F-4DBF-B247-51E961997B34"
+	affinity_mask = "0x1"
+	instance_count = "15"
+	domain_types = "0"
+	load_type = "1"
+	module_type = "5"
+	auto_start = "0"
+	sched_caps = [1, 0x00008000]
+
+	# pin = [dir, type, sample rate, size, container, channel-cfg]
+	pin = [0, 0, 0xffff, 0xc, 0x8, 0x05ff,
+			1, 0, 0xffff, 0xc, 0x8, 0x45ff]
+
+	# mod_cfg [PAR_0 PAR_1 PAR_2 PAR_3 IS_BYTES CPS IBS OBS MOD_FLAGS CPC OBLS]
+	mod_cfg = [0, 0, 0, 0, 216, 706000, 12, 16, 0, 0, 0,
+				1, 0, 0, 0, 216, 1271000, 8, 8, 0, 0, 0,
+				2, 0, 0, 0, 216, 1839000, 89, 118, 0, 0, 0,
+				3, 0, 0, 0, 216, 2435000, 48, 64, 0, 0, 0,
+				4, 0, 0, 0, 216, 3343000, 192, 192, 0, 0, 0,
+				5, 0, 0, 0, 216, 3961000, 177, 177, 0, 0, 0,
+				6, 0, 0, 0, 216, 4238000, 192, 256, 0, 0, 0,
+				7, 0, 0, 0, 216, 6691000, 192, 256, 0, 0, 0]
+
+	[[module.entry]]
+	name = "PROBE"
+	uuid = "7CAD0808-AB10-CD23-EF45-12AB34CD56EF"
+	affinity_mask = "0x1"
+	instance_count = "1"
+	domain_types = "0"
+	load_type = "0"
+	module_type = "9"
+	auto_start = "0"
+	sched_caps = [1, 0x00008000]
+
+	# mod_cfg [PAR_0 PAR_1 PAR_2 PAR_3 IS_BYTES CPS IBS OBS MOD_FLAGS CPC OBLS]
+	mod_cfg = [0, 0, 0, 0, 4096, 100000, 48, 48, 0, 1000, 0]
+
+ 	[[module.entry]]
+	name = "MUX"
+	uuid = "64ce6e35-857a-4878-ace8-e2a2f42e3069"
+	affinity_mask = "0x1"
+	instance_count = "15"
+	domain_types = "0"
+	load_type = "1"
+	module_type = "6"
+	auto_start = "0"
+	sched_caps = [1, 0x00008000]
+
+	# pin = [dir, type, sample rate, size, container, channel-cfg]
+	pin = [0, 0, 0xfeef, 0xf, 0xa, 0x45ff,
+			0, 0, 0xfeef, 0xf, 0xa, 0x45ff,
+			1, 0, 0xfeef, 0xf, 0xa, 0x45ff]
+
+	# mod_cfg [PAR_0 PAR_1 PAR_2 PAR_3 IS_BYTES CPS IBS OBS MOD_FLAGS CPC OBLS]
+	mod_cfg = [0, 0, 0, 0, 280, 460700, 16, 16, 0, 0, 0]
+
+	[[module.entry]]
+	name = "KDTEST"
+	uuid = "EBA8D51F-7827-47B5-82EE-DE6E7743AF67"
+	affinity_mask = "0x1"
+	instance_count = "1"
+	domain_types = "0"
+	load_type = "1"
+	module_type = "9"
+	auto_start = "0"
+	sched_caps = [1, 0x00008000]
+
+	# pin = [dir, type, sample rate, size, container, channel-cfg]
+	pin = [0, 0, 0xfeef, 0xf, 0xf, 0x45ff,
+			1, 0, 0xfeef, 0xf, 0xa, 0x45ff]
+
+	# mod_cfg [PAR_0 PAR_1 PAR_2 PAR_3 IS_BYTES CPS IBS OBS MOD_FLAGS CPC OBLS]
+	mod_cfg = [0, 0, 0, 0, 480, 1114000, 64, 64, 0, 0, 0]
+
+	[[module.entry]]
+	name = "KPB"
+	uuid = "D8218443-5FF3-4A4C-B388-6CFE07B9562E"
+	affinity_mask = "0x1"
+	instance_count = "1"
+	domain_types = "0"
+	load_type = "1"
+	module_type = "0xB"
+	auto_start = "0"
+	sched_caps = [1, 0x00008000]
+
+	# pin = [dir, type, sample rate, size, container, channel-cfg]
+	pin = [0, 0, 0xfeef, 0xf, 0xf, 0x45ff,
+			1, 0, 0xfeef, 0xf, 0xa, 0x45ff]
+
+	# mod_cfg [PAR_0 PAR_1 PAR_2 PAR_3 IS_BYTES CPS IBS OBS MOD_FLAGS CPC OBLS]
+	mod_cfg = [0, 0, 0, 0, 14400, 1114000, 16, 16, 0, 0, 0]

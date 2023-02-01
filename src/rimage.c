@@ -31,6 +31,7 @@ static void usage(char *name)
 	fprintf(stdout, "\t -e build extended manifest\n");
 	fprintf(stdout, "\t -y verify signed file\n");
 	fprintf(stdout, "\t -q resign binary\n");
+	fprintf(stdout, "\t -p set PV bit\n");
 }
 
 int main(int argc, char *argv[])
@@ -39,12 +40,15 @@ int main(int argc, char *argv[])
 	struct adsp *heap_adsp;
 	const char *adsp_config = NULL;
 	int opt, ret, i, first_non_opt;
-	int imr_type = MAN_DEFAULT_IMR_TYPE;
 	int use_ext_man = 0;
+	unsigned int pv_bit = 0;
+	bool imr_type_override = false;
 
 	memset(&image, 0, sizeof(image));
 
-	while ((opt = getopt(argc, argv, "ho:va:s:k:ri:f:b:ec:y:q:")) != -1) {
+	image.imr_type = MAN_DEFAULT_IMR_TYPE;
+
+	while ((opt = getopt(argc, argv, "ho:va:s:k:ri:f:b:ec:y:q:p")) != -1) {
 		switch (opt) {
 		case 'o':
 			image.out_file = optarg;
@@ -65,7 +69,8 @@ int main(int argc, char *argv[])
 			image.reloc = 1;
 			break;
 		case 'i':
-			imr_type = atoi(optarg);
+			image.imr_type = atoi(optarg);
+			imr_type_override = true;
 			break;
 		case 'f':
 			image.fw_ver_string = optarg;
@@ -87,6 +92,9 @@ int main(int argc, char *argv[])
 			return 0;
 		case 'q':
 			image.in_file = optarg;
+			break;
+		case 'p':
+			pv_bit = 1;
 			break;
 		default:
 		 /* getopt's default error message is good enough */
@@ -148,7 +156,7 @@ int main(int argc, char *argv[])
 	}
 	image.adsp = heap_adsp;
 	memset(heap_adsp, 0, sizeof(*heap_adsp));
-	ret = adsp_parse_config(adsp_config, heap_adsp, image.verbose);
+	ret = adsp_parse_config(adsp_config, &image);
 	if (ret < 0)
 		goto out;
 
@@ -163,15 +171,24 @@ int main(int argc, char *argv[])
 		return resign_image(&image);
 	}
 
-	/* set IMR Type in found machine definition */
-	if (image.adsp->man_v1_8)
-		image.adsp->man_v1_8->adsp_file_ext.imr_type = imr_type;
+	/* set IMR Type and the PV bit in found machine definition */
+	if (image.adsp->man_v1_8) {
+		if (imr_type_override)
+			image.adsp->man_v1_8->adsp_file_ext.imr_type = image.imr_type;
+		image.adsp->man_v1_8->css.reserved0 = pv_bit;
+	}
 
-	if (image.adsp->man_v2_5)
-		image.adsp->man_v2_5->adsp_file_ext.imr_type = imr_type;
+	if (image.adsp->man_v2_5) {
+		if (imr_type_override)
+			image.adsp->man_v2_5->adsp_file_ext.imr_type = image.imr_type;
+		image.adsp->man_v2_5->css.reserved0 = pv_bit;
+	}
 
-	if (image.adsp->man_ace_v1_5)
-		image.adsp->man_ace_v1_5->adsp_file_ext.imr_type = imr_type;
+	if (image.adsp->man_ace_v1_5) {
+		if (imr_type_override)
+			image.adsp->man_ace_v1_5->adsp_file_ext.imr_type = image.imr_type;
+		image.adsp->man_ace_v1_5->css.reserved0 = pv_bit;
+	}
 
 	/* parse input ELF files */
 	image.num_modules = argc - first_non_opt;
